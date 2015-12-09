@@ -1,10 +1,9 @@
 """
-Artorias: a server that reflects commits made on GitHub repos to 
+Artorias: a server that reflects commits made on GitHub repos to
 svn repos.
 
 svineet saivineet89@gmail.com
 """
-
 
 import json
 import os
@@ -16,11 +15,30 @@ from pprint import pprint
 from config import PORT, DIRECTORY_MAP
 
 
-class Artorias(http.server.SimpleHTTPRequestHandler):
+def git_pull(repo_name):
+    initial_dir = os.getcwd()
+    dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name])
+    os.chdir(dir_)
 
-    # return error code because a GET request is meaningless
+    try:
+        command = subprocess.check_output('git pull origin master',
+                                          shell=True)
+        print('Git output:')
+        print('-'*80)
+        print(command.decode('utf-8'))
+        print('-'*80)
+    except subprocess.CalledProcessError:
+        print('error :(')
+    os.chdir(initial_dir)
+
+
+class Artorias(http.server.SimpleHTTPRequestHandler):
+    """
+        HTTP Server that syncs local svn repos with upstream
+        GitHub repos.
+    """
     def do_GET(self):
-        print('Gott')
+        '''Returns an error because GET is useless for us'''
         self.send_response(403)
 
     def do_POST(self):
@@ -42,29 +60,18 @@ class Artorias(http.server.SimpleHTTPRequestHandler):
             print("{}: {} committed to {}".format(name, email, repo))
 
             if event == 'push':
-                self.git_pull(data)
+                git_pull(repo)
 
         self.send_response(200)
 
-    def git_pull(self, data):
-        repo = data['repository']['name']
-        initial_dir = os.getcwd()
-        dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo])
-        os.chdir(dir_)
-
-        try:
-            command = subprocess.check_output('git pull origin master',
-                                              shell=True)
-            print('Git output:')
-            print('-'*80)
-            print(command.decode('utf-8'))
-            print('-'*80)
-        except subprocess.CalledProcessError:
-            print('error :(')
-        os.chdir(initial_dir)
-
 
 if __name__ == '__main__':
+    print('Pulling all repositories')
+    print('-'*80)
+    for (key, value) in DIRECTORY_MAP.items():
+        print('Pulling: '+key)
+        git_pull(key)
+
     httpd = socketserver.TCPServer(("", PORT), Artorias)
     print("Serving on {}".format(PORT))
     try:
