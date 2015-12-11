@@ -1,8 +1,7 @@
 # Port to serve on
 PORT = 8808
 
-
-# Repo name: (repo url, repo directory name)
+# Repo name -> Directory in which repo exists locally, URL to fetch from 
 DIRECTORY_MAP = {
-    'FakeRepoLulz': 'FakeRepoLulz',
+    'FakeRepoLulz': ('FakeRepoLulz', 'https://github.com/svineet/FakeRepoLulz'),
 }
