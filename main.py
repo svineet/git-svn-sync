@@ -15,34 +15,80 @@ import socketserver
 
 from pprint import pprint
 from config import PORT, DIRECTORY_MAP
+from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE
 
 
-def git_clone(repo_name):
-    name, url = DIRECTORY_MAP[repo_name]
+def do_command(command):
+    command = subprocess.check_output(command,
+                                      shell=True)
+    print(command.decode('utf-8'))
+
+
+def svn_clone(repo_name):
+    name, git_url, svn_url = DIRECTORY_MAP[repo_name]
+    initial_dir = os.getcwd()
+    dir_ = os.path.join(os.getcwd(), name)
     try:
-        command = subprocess.check_output('git clone "'+url+'" "'+name+'"',
-                                          shell=True)
-        print(command.decode('utf-8'))
-        print('Cloned successfully.')
+        do_command('svn co "'+svn_url+'" "'+name+'"')
+        print('Cloned from SVN successfully.')
+
+        print('Initializing local repo and setting remotes to GitHub')
+
+        os.chdir(dir_)
+        do_command('git init')
+        do_command('git remote add origin '+git_url)
+        do_command('git fetch origin master')
+        do_command('git reset --hard origin/master')
+
+        print('Setting ignores for svn')
+        do_command('svn propset svn:ignore .git .')
+
+        os.chdir(initial_dir)
     except subprocess.CalledProcessError:
         print('error :(')
 
 
-def git_pull(repo_name):
+def svn_push(repo_name, data):
+    dir_name, git_url, svn_url = DIRECTORY_MAP[repo_name]
+
+    if not data:
+        try:
+            do_command('svn add --force .')
+            do_command('svn commit -m "'+INITIAL_COMMIT_MESSAGE+'"')
+        except subprocess.CalledProcessError:
+            print('error :(')
+
+        return
+
+    email, name = data['pusher']['email'], data['pusher']['name']
+    msg = data['head_commit']['message']
+    commit_message = COMMIT_MESSAGE.format(
+        msg, name, email)
+    print('Commiting with message '+commit_message)
+
+    try:
+        do_command('svn add --force .')
+        do_command('svn commit -m "'+commit_message+'"')
+    except subprocess.CalledProcessError:
+        print('error :(')
+
+
+def git_pull(repo_name, data={}):
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
     if not os.path.isdir(dir_):
         print('Could not find repo '+repo_name+', now cloning.')
-        git_clone(repo_name)
+        svn_clone(repo_name)
+        os.chdir(dir_)
+        svn_push(repo_name, data)
+        os.chdir(initial_dir)
         return
 
     os.chdir(dir_)
-
     try:
-        command = subprocess.check_output('git pull origin master',
-                                          shell=True)
-        print(command.decode('utf-8'))
+        do_command('git pull origin master')
+        svn_push(repo_name, data)
     except subprocess.CalledProcessError:
         print('error :(')
     os.chdir(initial_dir)
@@ -68,6 +114,7 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 
         # handle GitHub triggers only
         if 'GitHub' in self.headers['User-Agent']:
+            # pprint(data)
             event = self.headers['X-Github-Event']
             email, name = data['pusher']['email'], data['pusher']['name']
             repo = data['repository']['name']
@@ -75,7 +122,7 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
             print("{}: {} committed to {}".format(name, email, repo))
 
             if event == 'push':
-                git_pull(repo)
+                git_pull(repo, data)
 
         self.send_response(200)
 
