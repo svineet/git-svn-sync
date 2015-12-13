@@ -11,5 +11,6 @@ DIRECTORY_MAP = {
 }
 
 
+# Commit name on github, Committer name and Committer email 
 COMMIT_MESSAGE = "{} - {}: {}"
 INITIAL_COMMIT_MESSAGE = "[ git-svn-sync Update Repository data ]"
