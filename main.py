@@ -68,7 +68,7 @@ def svn_push(repo_name, data):
 
     try:
         do_command('svn add --force .')
-        do_command('svn commit -m "'+commit_message+'"')
+        do_command('svn commit -m "'+commit_message+'" --no-unlock')
     except subprocess.CalledProcessError:
         print('error :(')
 
