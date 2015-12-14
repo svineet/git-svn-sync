@@ -7,10 +7,12 @@ PORT = 8808
 DIRECTORY_MAP = {
     'FakeRepoLulz': ('FakeRepoLulz',
         'https://github.com/svineet/FakeRepoLulz',
-        'https://svineetorg.svn.cloudforge.com/fakerepolulz'),
+        'https://svineetorg.svn.cloudforge.com/fakerepolulz3'),
 }
 
 
-# Commit name on github, Committer name and Committer email 
-COMMIT_MESSAGE = "{} - {}: {}"
-INITIAL_COMMIT_MESSAGE = "[ git-svn-sync Update Repository data ]"
+# Commit name on github, new sha[:6], Committer name and Committer email 
+COMMIT_MESSAGE = "git-svn-sync: {} ({}) - {}<{}>"
+INITIAL_COMMIT_MESSAGE = 'git-svn-sync: Sync repository'
+# Repo name, sha-old, sha-new
+UPDATE_COMMIT_MESSAGE = 'git-svn-sync: {} updated from {} -> {}'
