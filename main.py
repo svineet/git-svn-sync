@@ -29,25 +29,25 @@ def svn_clone(repo_name):
     name, git_url, svn_url = DIRECTORY_MAP[repo_name]
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), name)
-    # try:
-    do_command('svn co "'+svn_url+'" "'+name+'"')
-    print('Cloned from SVN successfully.')
+    try:
+        do_command('svn co "'+svn_url+'" "'+name+'"')
+        print('Cloned from SVN successfully.')
 
-    print('Initializing local repo and setting remotes to GitHub')
-    os.chdir(dir_)
-    do_command('git init')
-    do_command('git remote add origin '+git_url)
-    do_command('git fetch origin master')
-    do_command('git reset --hard origin/master')
-    do_command('echo $(git rev-parse HEAD) >> .git-svn-sync')
+        print('Initializing local repo and setting remotes to GitHub')
+        os.chdir(dir_)
+        do_command('git init')
+        do_command('git remote add origin '+git_url)
+        do_command('git fetch origin master')
+        do_command('git reset --hard origin/master')
+        do_command('echo $(git rev-parse HEAD) >> .git-svn-sync')
 
-    print('Setting ignores for svn')
-    do_command('svn propset svn:ignore .git .')
+        print('Setting ignores for svn')
+        do_command('svn propset svn:ignore .git .')
 
-    os.chdir(initial_dir)
-    # except subprocess.CalledProcessError as error:
-    #     print('error :(')
-    #     print(error)
+        os.chdir(initial_dir)
+    except subprocess.CalledProcessError as error:
+        print('error :(')
+        print(error)
 
 
 def svn_push(repo_name, data, newsha="", oldsha=""):
@@ -106,6 +106,7 @@ def git_pull(repo_name, data={}, newsha="", oldsha=""):
         oldsha = open('.git-svn-sync').read().strip()
         newsha = do_command('git rev-parse HEAD', return_=True)
         svn_push(repo_name, data, newsha, oldsha)
+        do_command('echo $(git rev-parse HEAD) >> .git-svn-sync')
     except subprocess.CalledProcessError:
         print('error :(')
     os.chdir(initial_dir)
