@@ -33,11 +33,12 @@ def get_sha(repo_name):
         Enters repo_name directory and returns current git sha
     """
     initial_dir = os.getcwd()
-    dir_ = os.path.join(os.getcwd(), name)
+    dir_ = os.path.join(os.getcwd(), repo_name)
 
     os.chdir(dir_)
+    shia = ""
     try:
-        shia = do_command('git rev-parse HEAD')
+        shia = do_command('git rev-parse HEAD', return_=True)
     except subprocess.CalledProcessError as error:
         print('error :(')
         print(error)
