@@ -19,16 +19,42 @@ from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
 
 
 def do_command(command, return_=False):
+    """
+        Execute a command on the shell and return output if asked for.
+    """
     output = subprocess.check_output(command, stderr=subprocess.STDOUT,
                                      shell=True)
     print(output.decode('utf-8'))
     if return_: return output.decode('utf-8')
 
 
+def get_sha(repo_name):
+    """
+        Enters repo_name directory and returns current git sha
+    """
+    initial_dir = os.getcwd()
+    dir_ = os.path.join(os.getcwd(), name)
+
+    os.chdir(dir_)
+    try:
+        shia = do_command('git rev-parse HEAD')
+    except subprocess.CalledProcessError as error:
+        print('error :(')
+        print(error)
+    os.chdir(initial_dir)
+
+    return shia
+
+
 def svn_clone(repo_name):
+    """
+        Enter repo_name directory and clone.
+        Will sync local repo with git remote.
+    """
     name, git_url, svn_url = DIRECTORY_MAP[repo_name]
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), name)
+
     try:
         do_command('svn co "'+svn_url+'" "'+name+'"')
         print('Cloned from SVN successfully.')
@@ -39,7 +65,6 @@ def svn_clone(repo_name):
         do_command('git remote add origin '+git_url)
         do_command('git fetch origin master')
         do_command('git reset --hard origin/master')
-        do_command('echo $(git rev-parse HEAD) >> .git-svn-sync')
 
         print('Setting ignores for svn')
         do_command('svn propset svn:ignore .git .')
@@ -50,65 +75,40 @@ def svn_clone(repo_name):
         print(error)
 
 
-def svn_push(repo_name, data, newsha="", oldsha=""):
+def svn_push(repo_name, commit_message):
+    """
+        Enter a directory with repo_name and then
+        svn commit with commit message.
+    """
     dir_name, git_url, svn_url = DIRECTORY_MAP[repo_name]
+    initial_dir = os.getcwd()
+    dir_ = os.path.join(os.getcwd(), dir_name)
 
-    if not data:
-        # IF sha in .git-svn-sync == current sha from git rev-parse HEAD
-        # we just cloned afresh, make initial svn commit message
-        # ELSE if they are different, we we skipped some commits
-        #      meaning we are either being pulled again on startup
-        #      or a new github hook came.
-        # since there is no data here, no github hook
-        # we just recloned here. so reponame sha1->sha2
-        commit_message = INITIAL_COMMIT_MESSAGE
-        if oldsha!=newsha:
-            commit_message = UPDATE_COMMIT_MESSAGE.format(repo_name,
-                oldsha, newsha)
-        try:
-            do_command('svn add --force .')
-            do_command('svn commit -m "'+commit_message+'" --no-unlock')
-        except subprocess.CalledProcessError:
-            print('error :(')
-
-        return
-
-    email, name = data['pusher']['email'], data['pusher']['name']
-    msg = data['head_commit']['message']
-    commit_message = COMMIT_MESSAGE.format(
-        msg, newsha[:6], name, email)
     print('Commiting with message '+commit_message)
-
+    os.chdir(dir_)
     try:
         do_command('svn add --force .')
         do_command('svn commit -m "'+commit_message+'" --no-unlock')
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as error:
         print('error :(')
+        print(error)
+
+    os.chdir(initial_dir)
 
 
-def git_pull(repo_name, data={}, newsha="", oldsha=""):
+def git_pull(repo_name):
+    """
+        Enter repo_name directory and pull from git repo.
+    """
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
-    if not os.path.isdir(dir_):
-        print('Could not find repo '+repo_name+', now cloning.')
-        svn_clone(repo_name)
-        oldsha = newsha = do_command('git rev-parse HEAD',
-                                     return_=True)
-        os.chdir(dir_)
-        svn_push(repo_name, data, newsha, oldsha)
-        os.chdir(initial_dir)
-        return
-
     os.chdir(dir_)
     try:
-        do_command('git pull origin master')
-        oldsha = open('.git-svn-sync').read().strip()
-        newsha = do_command('git rev-parse HEAD', return_=True)
-        svn_push(repo_name, data, newsha, oldsha)
-        do_command('echo $(git rev-parse HEAD) >> .git-svn-sync')
-    except subprocess.CalledProcessError:
+        do_command('git pull origin master -f') # CHECK: forced now
+    except subprocess.CalledProcessError as error:
         print('error :(')
+        print(error)
     os.chdir(initial_dir)
 
 
@@ -132,17 +132,19 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 
         # handle GitHub triggers only
         if 'GitHub' in self.headers['User-Agent']:
-            pprint(data)
             event = self.headers['X-Github-Event']
             email, name = data['pusher']['email'], data['pusher']['name']
             repo = data['repository']['name']
-            newsha = data['head_commit']['id']
             dir_ = DIRECTORY_MAP[repo][0]
-            oldsha = open(dir_+'/.git-svn-sync').read().strip()
 
             print("{}: {} committed to {}".format(name, email, repo))
             if event == 'push':
-                git_pull(repo, data, newsha, oldsha)
+                git_pull(repo)
+                new_sha = get_sha(repo)
+                gh_msg = data['head_commit']['message']
+                commit_message = COMMIT_MESSAGE.format(
+                    gh_msg, new_sha[:6], name, email)
+                svn_push(repo, commit_message)
 
         self.send_response(200)
 
@@ -150,9 +152,22 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     print('Pulling all repositories')
     print('-'*80)
-    for (key, value) in DIRECTORY_MAP.items():
-        print('Pulling: '+key)
-        git_pull(key)
+    for (repo_name, value) in DIRECTORY_MAP.items():
+        print('Pulling: '+repo_name)
+
+        dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
+        commit_message = INITIAL_COMMIT_MESSAGE
+        if not os.path.isdir(dir_):
+            print('Could not find repo '+repo_name+', now cloning.')
+            svn_clone(repo_name)
+        else:
+            pre_sha = get_sha(repo_name)
+            git_pull(repo_name)
+            post_sha = get_sha(repo_name)
+            commit_message = UPDATE_COMMIT_MESSAGE.format(repo_name, pre_sha, post_sha)
+
+        svn_push(repo_name, commit_message)
+        print('-'*80)
 
     httpd = socketserver.TCPServer(("", PORT), SyncHandler)
     print("Serving on {}".format(PORT))

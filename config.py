@@ -4,10 +4,12 @@ PORT = 8808
 # Repo name -> Directory in which repo exists locally,
 #              URL to fetch from GitHub,
 #              URL to push to svn
+# WARNING: REPO NAME (I.E KEY) MUST == REPO NAME ON GITHUB. ONLY THEN
+# WILL git-svn-sync KNOW WHICH REPO TO MESS WITH.
 DIRECTORY_MAP = {
-    'FakeRepoLulz': ('FakeRepoLulz',
-        'https://github.com/svineet/FakeRepoLulz',
-        'https://svineetorg.svn.cloudforge.com/fakerepolulz3'),
+    'apertium-html-tools': ('apertium-html-tools',
+        'https://github.com/goavki/apertium-html-tools.git',
+        'https://svn.code.sf.net/p/apertium/svn/trunk/apertium-tools/apertium-html-tools/'),
 }
 
 
