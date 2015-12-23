@@ -18,7 +18,7 @@ from config import PORT, DIRECTORY_MAP
 from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
 
 UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec sh -c '../unlocker.sh "{}"' \;'''
-
+LOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec sh -c '../locker.sh "{}"' \;'''
 
 def do_command(command, print_output=True, return_=False):
     """
@@ -83,10 +83,11 @@ def svn_clone(repo_name):
 
     try:
         print('Now trying to gain lock access. May fail.')
-        do_command(UNLOCK_COMMAND, print=False)
-        do_command(LOCK_COMMAND, print=False)
+        do_command(UNLOCK_COMMAND, print_output=False)
+        do_command(LOCK_COMMAND, print_output=False)
+        print('Locking might have worked.')
     except subprocess.CalledProcessError as error:
-        print('Unlocking failed. Please see README#Troubleshooting')
+        print('Unlocking/locking failed. Please see README#Troubleshooting')
         print(error)
 
 
