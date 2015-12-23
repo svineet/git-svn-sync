@@ -81,6 +81,7 @@ def svn_clone(repo_name):
         print('error :(')
         print(error)
 
+    os.chdir(dir_)
     try:
         print('Now trying to gain lock access. May fail.')
         do_command(UNLOCK_COMMAND, print_output=False)
@@ -89,6 +90,7 @@ def svn_clone(repo_name):
     except subprocess.CalledProcessError as error:
         print('Unlocking/locking failed. Please see README#Troubleshooting')
         print(error)
+    os.chdir(initial_dir)
 
 
 def svn_push(repo_name, commit_message):
