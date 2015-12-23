@@ -21,3 +21,8 @@ Now you will see a external URL for the server you have running locally. Open Gi
 
 Testing repository for convenience: [FakeRepoLulz](https://github.com/svineet/FakeRepoLulz). Has convenience script 'fake-commit.sh' for making fake commits for testing hook. Please fork and add the ngrok URL you got on running `ngrok http 8808` and test it out.
 
+Troubleshooting
+---------------
+
+If you get lock errors, please `cd` into the clone directory and then svn unlock all files. Then gain lock access for yourself.
+

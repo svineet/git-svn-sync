@@ -17,15 +17,20 @@ from pprint import pprint
 from config import PORT, DIRECTORY_MAP
 from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
 
+UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec sh -c '../unlocker.sh "{}"' \;'''
 
-def do_command(command, return_=False):
+
+def do_command(command, print_output=True, return_=False):
     """
         Execute a command on the shell and return output if asked for.
     """
     output = subprocess.check_output(command, stderr=subprocess.STDOUT,
                                      shell=True)
-    print(output.decode('utf-8'))
-    if return_: return output.decode('utf-8')
+    if print_output:
+        print(output.decode('utf-8'))
+
+    if return_:
+        return output.decode('utf-8')
 
 
 def get_sha(repo_name):
@@ -51,6 +56,7 @@ def svn_clone(repo_name):
     """
         Enter repo_name directory and clone.
         Will sync local repo with git remote.
+        Also does related things like add ignores and tries setting locks.
     """
     name, git_url, svn_url = DIRECTORY_MAP[repo_name]
     initial_dir = os.getcwd()
@@ -73,6 +79,14 @@ def svn_clone(repo_name):
         os.chdir(initial_dir)
     except subprocess.CalledProcessError as error:
         print('error :(')
+        print(error)
+
+    try:
+        print('Now trying to gain lock access. May fail.')
+        do_command(UNLOCK_COMMAND, print=False)
+        do_command(LOCK_COMMAND, print=False)
+    except subprocess.CalledProcessError as error:
+        print('Unlocking failed. Please see README#Troubleshooting')
         print(error)
 
 
