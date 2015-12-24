@@ -9,7 +9,7 @@ PORT = 8808
 DIRECTORY_MAP = {
     'FakeRepoLulz': ('FakeRepoLulz',
         'git@github.com:svineet/FakeRepoLulz.git',
-        'https://svineetorg.svn.cloudforge.com/fakerepolulz5'),
+        'https://svn.code.sf.net/p/fake-apertium-html-tools/code/'),
 }
 
 
