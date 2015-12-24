@@ -65,35 +65,34 @@ def svn_clone(repo_name):
     try:
         do_command('svn co "'+svn_url+'" "'+name+'"')
         print('Cloned from SVN successfully.')
-        print('Setting ignores for svn')
-        do_command('svn propset svn:ignore .git .')
+        # print('Setting ignores for svn')
+        # do_command('svn propset svn:ignore .git .')
 
         print('Initializing local repo and setting remotes to GitHub')
         os.chdir(dir_)
+
         do_command('git init')
         do_command('git remote add origin '+git_url)
-
         do_command('svn rm --force ./*')
         do_command('git fetch origin master')
         do_command('git reset --hard origin/master')
         do_command('svn add --force .')
 
-
         os.chdir(initial_dir)
     except subprocess.CalledProcessError as error:
-        print('error :(')
+        print('Error!')
         print(error)
 
-    os.chdir(dir_)
-    try:
-        print('Now trying to gain lock access. May fail.')
-        do_command(UNLOCK_COMMAND, print_output=True)
-        do_command(LOCK_COMMAND, print_output=True)
-        print('Locking might have worked.')
-    except subprocess.CalledProcessError as error:
-        print('Unlocking/locking failed. Please see README#Troubleshooting')
-        print(error)
-    os.chdir(initial_dir)
+    # os.chdir(dir_)
+    # try:
+    #     print('Now trying to gain lock access. May fail.')
+    #     do_command(UNLOCK_COMMAND, print_output=True)
+    #     do_command(LOCK_COMMAND, print_output=True)
+    #     print('Locking might have worked.')
+    # except subprocess.CalledProcessError as error:
+    #     print('Unlocking/locking failed. Please see README#Troubleshooting')
+    #     print(error)
+    # os.chdir(initial_dir)
 
 
 def svn_push(repo_name, commit_message):
