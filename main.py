@@ -65,16 +65,18 @@ def svn_clone(repo_name):
     try:
         do_command('svn co "'+svn_url+'" "'+name+'"')
         print('Cloned from SVN successfully.')
+        print('Setting ignores for svn')
+        do_command('svn propset svn:ignore .git .')
 
         print('Initializing local repo and setting remotes to GitHub')
         os.chdir(dir_)
         do_command('git init')
         do_command('git remote add origin '+git_url)
+        do_command('svn rm --force ./*')
         do_command('git fetch origin master')
         do_command('git reset --hard origin/master')
+        do_command('svn add --force .')
 
-        print('Setting ignores for svn')
-        do_command('svn propset svn:ignore .git .')
 
         os.chdir(initial_dir)
     except subprocess.CalledProcessError as error:
@@ -84,8 +86,8 @@ def svn_clone(repo_name):
     os.chdir(dir_)
     try:
         print('Now trying to gain lock access. May fail.')
-        do_command(UNLOCK_COMMAND, print_output=False)
-        do_command(LOCK_COMMAND, print_output=False)
+        do_command(UNLOCK_COMMAND, print_output=True)
+        do_command(LOCK_COMMAND, print_output=True)
         print('Locking might have worked.')
     except subprocess.CalledProcessError as error:
         print('Unlocking/locking failed. Please see README#Troubleshooting')
@@ -97,6 +99,11 @@ def svn_push(repo_name, commit_message):
     """
         Enter a directory with repo_name and then
         svn commit with commit message.
+        It will first restore pristine state using git clean -d -f
+        then it will remove all staged files from svn
+        then it will add all files in current dir to svn
+        then it pushes to remote svn. This is so that
+        deleted or renamed files are taken care of.
     """
     dir_name, git_url, svn_url = DIRECTORY_MAP[repo_name]
     initial_dir = os.getcwd()
@@ -105,7 +112,6 @@ def svn_push(repo_name, commit_message):
     print('Commiting with message '+commit_message)
     os.chdir(dir_)
     try:
-        do_command('svn add --force .')
         do_command('svn commit -m "'+commit_message+'" --no-unlock')
     except subprocess.CalledProcessError as error:
         print('error :(')
@@ -116,14 +122,21 @@ def svn_push(repo_name, commit_message):
 
 def git_pull(repo_name):
     """
-        Enter repo_name directory and pull from git repo.
+        Enter repo_name directory and fetch-reset from git repo.
+
+        It will also remove all files from svn tracking and then
+        add them again to svn so that renamed files and deleted
+        files are taken care of.
     """
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
     os.chdir(dir_)
     try:
-        do_command('git pull origin master -f') # CHECK: forced now
+        do_command('svn rm --force ./*')
+        do_command('git fetch origin master')
+        do_command('git reset --hard origin/master')
+        do_command('svn add --force .')
     except subprocess.CalledProcessError as error:
         print('error :(')
         print(error)
@@ -161,7 +174,7 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
                 new_sha = get_sha(repo)
                 gh_msg = data['head_commit']['message']
                 commit_message = COMMIT_MESSAGE.format(
-                    gh_msg, new_sha[:6], name, email)
+                    gh_msg, new_sha[:7], name, email)
                 svn_push(repo, commit_message)
 
         self.send_response(200)

@@ -1,0 +1,20 @@
+Test:
+* Test forced commits to git
+* Test file deletion/renaming, etc
+* Test locked repo things.
+
+
+Procedure:
+* hook received
+* we remove all files from svn tracking
+* we do git fetch-reset dance
+* we add all files to svn again
+* we push to svn
+
+Currently:
+* hook
+* sha noted.
+* git pull-ed
+* sha noted.
+* svn adds everything
+* svn push.
