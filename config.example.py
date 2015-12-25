@@ -1,5 +1,10 @@
 # Port to serve on
 PORT = 8808
+# Whether to take control of locks before every svn commit or not
+# this might be expensive in terms of bandwidth, and slow.
+# However it prevents others from trying to break locks and make their own
+# locks for some reason.
+BREAK_LOCKS_EVERYTIME = False
 
 # Repo name -> Directory in which repo exists locally,
 #              URL to fetch from GitHub,

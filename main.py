@@ -16,9 +16,10 @@ import socketserver
 from pprint import pprint
 from config import PORT, DIRECTORY_MAP
 from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
+from config import BREAK_LOCKS_EVERYTIME
 
-UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec sh -c '../unlocker.sh "{}"' \;'''
-LOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec sh -c '../locker.sh "{}"' \;'''
+UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn unlock --force {} \;'''
+LOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn lock --force {} \;'''
 
 def do_command(command, print_output=True, return_=False):
     """
@@ -46,7 +47,7 @@ def get_sha(repo_name):
         shia = do_command('git rev-parse HEAD', return_=True)
     except subprocess.CalledProcessError as error:
         print('error :(')
-        print(error)
+        print(error.output.decode('utf-8'))
     os.chdir(initial_dir)
 
     return shia
@@ -81,18 +82,17 @@ def svn_clone(repo_name):
         os.chdir(initial_dir)
     except subprocess.CalledProcessError as error:
         print('Error!')
-        print(error)
+        print(error.output.decode('utf-8'))
 
-    # os.chdir(dir_)
-    # try:
-    #     print('Now trying to gain lock access. May fail.')
-    #     do_command(UNLOCK_COMMAND, print_output=True)
-    #     do_command(LOCK_COMMAND, print_output=True)
-    #     print('Locking might have worked.')
-    # except subprocess.CalledProcessError as error:
-    #     print('Unlocking/locking failed. Please see README#Troubleshooting')
-    #     print(error)
-    # os.chdir(initial_dir)
+    os.chdir(dir_)
+    try:
+        print('Now trying to gain lock access. May fail.')
+        do_command(UNLOCK_COMMAND)
+        print('Locking might have worked.')
+    except subprocess.CalledProcessError as error:
+        print('Unlocking/locking failed. Please see README#Troubleshooting')
+        print(error.output.decode('utf-8'))
+    os.chdir(initial_dir)
 
 
 def svn_push(repo_name, commit_message):
@@ -112,10 +112,15 @@ def svn_push(repo_name, commit_message):
     print('Commiting with message '+commit_message)
     os.chdir(dir_)
     try:
-        do_command('svn commit -m "'+commit_message+'" --no-unlock')
+        if BREAK_LOCKS_EVERYTIME:
+            print('Breaking all locks as stated in config')
+            do_command(UNLOCK_COMMAND)
+        do_command('svn commit -m "'+commit_message+'"')
+        print('Now relocking repository.')
+        do_command(LOCK_COMMAND)
     except subprocess.CalledProcessError as error:
         print('error :(')
-        print(error)
+        print(error.output.decode('utf-8'))
 
     os.chdir(initial_dir)
 
@@ -139,7 +144,7 @@ def git_pull(repo_name):
         do_command('svn add --force .')
     except subprocess.CalledProcessError as error:
         print('error :(')
-        print(error)
+        print(error.output.decode('utf-8'))
     os.chdir(initial_dir)
 
 
@@ -181,6 +186,23 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv)>=2:
+        cmd = sys.argv[1]
+
+        if cmd.lower()=='clean':
+            print('Do you want to delete all local repository copies? Y/n')
+            confirm = input()
+            if not confirm or confirm[:1].lower()=='y':
+                for (repo_name, value) in DIRECTORY_MAP.items():
+                    print('Deleting ', repo_name)
+                    dir_ = os.path.join(os.getcwd(),
+                        DIRECTORY_MAP[repo_name][0])
+                    do_command('rm -rf '+dir_)
+                print('Done, exiting.')
+                sys.exit(0)
+
+
     print('Pulling all repositories')
     print('-'*80)
     for (repo_name, value) in DIRECTORY_MAP.items():
