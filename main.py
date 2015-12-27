@@ -39,7 +39,7 @@ def get_sha(repo_name):
         Enters repo_name directory and returns current git sha
     """
     initial_dir = os.getcwd()
-    dir_ = os.path.join(os.getcwd(), repo_name)
+    dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
     os.chdir(dir_)
     shia = ""
@@ -66,15 +66,18 @@ def svn_clone(repo_name):
     try:
         do_command('svn co "'+svn_url+'" "'+name+'"')
         print('Cloned from SVN successfully.')
-        # print('Setting ignores for svn')
-        # do_command('svn propset svn:ignore .git .')
+
+        os.chdir(dir_)
+        print('Setting ignores for svn')
+        do_command('svn propset svn:ignore .git .')
 
         print('Initializing local repo and setting remotes to GitHub')
-        os.chdir(dir_)
-
         do_command('git init')
         do_command('git remote add origin '+git_url)
-        do_command('svn rm --force ./*')
+        try:
+            do_command('svn rm --force ./*')
+        except Exception:
+            pass
         do_command('git fetch origin master')
         do_command('git reset --hard origin/master')
         do_command('svn add --force .')
@@ -125,23 +128,26 @@ def svn_push(repo_name, commit_message):
     os.chdir(initial_dir)
 
 
-def git_pull(repo_name):
+def git_pull(repo_name, forced=False):
     """
         Enter repo_name directory and fetch-reset from git repo.
 
         It will also remove all files from svn tracking and then
         add them again to svn so that renamed files and deleted
-        files are taken care of.
+        files are taken care of, for forced=True.
     """
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
     os.chdir(dir_)
     try:
-        do_command('svn rm --force ./*')
-        do_command('git fetch origin master')
-        do_command('git reset --hard origin/master')
-        do_command('svn add --force .')
+        if forced:
+            do_command('svn rm --force ./*')
+            do_command('git fetch origin master')
+            do_command('git reset --hard origin/master')
+            do_command('svn add --force .')
+        else:
+            do_command('git pull origin master')
     except subprocess.CalledProcessError as error:
         print('error :(')
         print(error.output.decode('utf-8'))
@@ -215,7 +221,7 @@ if __name__ == '__main__':
             svn_clone(repo_name)
         else:
             pre_sha = get_sha(repo_name)
-            git_pull(repo_name)
+            git_pull(repo_name, forced=True)
             post_sha = get_sha(repo_name)
             commit_message = UPDATE_COMMIT_MESSAGE.format(repo_name, pre_sha, post_sha)
 
