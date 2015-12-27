@@ -76,7 +76,7 @@ def svn_clone(repo_name):
         do_command('git remote add origin '+git_url)
         do_command('svn rm --force ./*')
         do_command('git fetch origin master')
-        do_command('git reset --hard origin/master')
+        do_command('git reset --hard origin master')
         do_command('svn add --force .')
 
         os.chdir(initial_dir)
@@ -140,7 +140,7 @@ def git_pull(repo_name):
     try:
         do_command('svn rm --force ./*')
         do_command('git fetch origin master')
-        do_command('git reset --hard origin/master')
+        do_command('git reset --hard origin master')
         do_command('svn add --force .')
     except subprocess.CalledProcessError as error:
         print('error :(')
