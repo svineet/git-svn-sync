@@ -5,6 +5,9 @@ PORT = 8808
 # However it prevents others from trying to break locks and make their own
 # locks for some reason.
 BREAK_LOCKS_EVERYTIME = False
+# Time saving tricks for debug time, set to False to make pushes faster
+# and let others commit to svn repo
+RELOCK_EVERYTIME = True
 
 # Repo name -> Directory in which repo exists locally,
 #              URL to fetch from GitHub,

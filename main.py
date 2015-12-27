@@ -16,7 +16,7 @@ import socketserver
 from pprint import pprint
 from config import PORT, DIRECTORY_MAP
 from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
-from config import BREAK_LOCKS_EVERYTIME
+from config import BREAK_LOCKS_EVERYTIME, RELOCK_EVERYTIME
 
 UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn unlock --force {} \;'''
 LOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn lock --force {} \;'''
@@ -64,25 +64,13 @@ def svn_clone(repo_name):
     dir_ = os.path.join(os.getcwd(), name)
 
     try:
+        print('This is the first run, please be patient as cloning and setting up might take time.')
         do_command('svn co "'+svn_url+'" "'+name+'"')
         print('Cloned from SVN successfully.')
-
         os.chdir(dir_)
+
         print('Setting ignores for svn')
         do_command('svn propset svn:ignore .git .')
-
-        print('Initializing local repo and setting remotes to GitHub')
-        do_command('git init')
-        do_command('git remote add origin '+git_url)
-        try:
-            do_command('svn rm --force ./*')
-        except Exception:
-            pass
-        do_command('git fetch origin master')
-        do_command('git reset --hard origin/master')
-        do_command('svn add --force .')
-
-        os.chdir(initial_dir)
     except subprocess.CalledProcessError as error:
         print('Error!')
         print(error.output.decode('utf-8'))
@@ -91,9 +79,28 @@ def svn_clone(repo_name):
     try:
         print('Now trying to gain lock access. May fail.')
         do_command(UNLOCK_COMMAND)
-        print('Locking might have worked.')
+        print('Unlocking might have worked.')
     except subprocess.CalledProcessError as error:
         print('Unlocking/locking failed. Please see README#Troubleshooting')
+        print(error.output.decode('utf-8'))
+
+    try:
+        print('Initializing local repo and setting remotes to GitHub')
+        do_command('git init')
+        do_command('git remote add origin '+git_url)
+        try:
+            do_command('svn rm --force ./*')
+        except Exception:
+            pass
+        print('Now pulling everything. May take time.')
+        try:
+            do_command('git pull origin master -f')
+        except Exception:
+            pass
+        do_command('git reset --hard origin/master')
+        do_command('svn add --force .')
+    except subprocess.CalledProcessError as error:
+        print('Error!')
         print(error.output.decode('utf-8'))
     os.chdir(initial_dir)
 
@@ -119,8 +126,9 @@ def svn_push(repo_name, commit_message):
             print('Breaking all locks as stated in config')
             do_command(UNLOCK_COMMAND)
         do_command('svn commit -m "'+commit_message+'"')
-        print('Now relocking repository.')
-        do_command(LOCK_COMMAND)
+        if RELOCK_EVERYTIME:
+            print('Now relocking repository.')
+            do_command(LOCK_COMMAND)
     except subprocess.CalledProcessError as error:
         print('error :(')
         print(error.output.decode('utf-8'))
@@ -128,26 +136,26 @@ def svn_push(repo_name, commit_message):
     os.chdir(initial_dir)
 
 
-def git_pull(repo_name, forced=False):
+def git_pull(repo_name):
     """
         Enter repo_name directory and fetch-reset from git repo.
 
         It will also remove all files from svn tracking and then
         add them again to svn so that renamed files and deleted
-        files are taken care of, for forced=True.
+        files are taken care of.
     """
     initial_dir = os.getcwd()
     dir_ = os.path.join(os.getcwd(), DIRECTORY_MAP[repo_name][0])
 
     os.chdir(dir_)
     try:
-        if forced:
-            do_command('svn rm --force ./*')
-            do_command('git fetch origin master')
-            do_command('git reset --hard origin/master')
-            do_command('svn add --force .')
-        else:
-            do_command('git pull origin master')
+        do_command('svn rm --force ./*')
+        try:
+            do_command('git pull origin master -f')
+        except Exception:
+            pass
+        do_command('git reset --hard origin/master')
+        do_command('svn add --force .')
     except subprocess.CalledProcessError as error:
         print('error :(')
         print(error.output.decode('utf-8'))
@@ -221,7 +229,7 @@ if __name__ == '__main__':
             svn_clone(repo_name)
         else:
             pre_sha = get_sha(repo_name)
-            git_pull(repo_name, forced=True)
+            git_pull(repo_name)
             post_sha = get_sha(repo_name)
             commit_message = UPDATE_COMMIT_MESSAGE.format(repo_name, pre_sha, post_sha)
 
