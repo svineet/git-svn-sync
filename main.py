@@ -7,6 +7,7 @@ svn repos.
 Sai Vineet(svineet) saivineet89@gmail.com
 """
 
+import sys
 import json
 import os
 import subprocess
@@ -14,7 +15,12 @@ import http.server
 import socketserver
 
 from pprint import pprint
-from config import PORT, DIRECTORY_MAP
+try:
+    from config import PORT, DIRECTORY_MAP
+except ImportError:
+    print('Please copy config.example.py into config.py and edit as required')
+    print('Exiting.')
+    sys.exit(0)
 from config import INITIAL_COMMIT_MESSAGE, COMMIT_MESSAGE, UPDATE_COMMIT_MESSAGE
 from config import BREAK_LOCKS_EVERYTIME, RELOCK_EVERYTIME
 
@@ -200,7 +206,6 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv)>=2:
         cmd = sys.argv[1]
 
