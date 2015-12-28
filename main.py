@@ -52,7 +52,7 @@ def get_sha(repo_name):
     try:
         shia = do_command('git rev-parse HEAD', return_=True)
     except subprocess.CalledProcessError as error:
-        print('error :(')
+        print('Error.')
         print(error.output.decode('utf-8'))
     os.chdir(initial_dir)
 
@@ -94,10 +94,7 @@ def svn_clone(repo_name):
         print('Initializing local repo and setting remotes to GitHub')
         do_command('git init')
         do_command('git remote add origin '+git_url)
-        try:
-            do_command('svn rm --force ./*')
-        except Exception:
-            pass
+
         print('Now pulling everything. May take time.')
         try:
             do_command('git pull origin master -f')
@@ -105,6 +102,10 @@ def svn_clone(repo_name):
             pass
         do_command('git reset --hard origin/master')
         do_command('svn add --force .')
+        try:
+            do_command('''svn st | grep ^! | awk '{print " --force "$2}' | xargs svn rm''')
+        except Exception:
+            pass
     except subprocess.CalledProcessError as error:
         print('Error!')
         print(error.output.decode('utf-8'))
@@ -136,7 +137,7 @@ def svn_push(repo_name, commit_message):
             print('Now relocking repository.')
             do_command(LOCK_COMMAND)
     except subprocess.CalledProcessError as error:
-        print('error :(')
+        print('Error!')
         print(error.output.decode('utf-8'))
 
     os.chdir(initial_dir)
@@ -155,15 +156,18 @@ def git_pull(repo_name):
 
     os.chdir(dir_)
     try:
-        do_command('svn rm --force ./*')
         try:
             do_command('git pull origin master -f')
         except Exception:
             pass
         do_command('git reset --hard origin/master')
         do_command('svn add --force .')
+        try:
+            do_command('''svn st | grep ^! | awk '{print " --force "$2}' | xargs svn rm''')
+        except Exception:
+            pass
     except subprocess.CalledProcessError as error:
-        print('error :(')
+        print('Error.')
         print(error.output.decode('utf-8'))
     os.chdir(initial_dir)
 

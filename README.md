@@ -24,5 +24,5 @@ Testing repository for convenience: [FakeRepoLulz](https://github.com/svineet/Fa
 Troubleshooting
 ---------------
 
-If you get lock errors, please `cd` into the clone directory and then svn unlock all files. Then gain lock access for yourself.
+If you get lock errors, please `cd` into the clone directory and then svn unlock all files. Then gain lock access for yourself. By default git-svn-sync tries to get lock access but in case it fails, this has to be done manually.
 
