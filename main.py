@@ -27,6 +27,7 @@ from config import BREAK_LOCKS_EVERYTIME, RELOCK_EVERYTIME
 UNLOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn unlock --force {} \;'''
 LOCK_COMMAND = '''find . -type d \( -path ./.git -o -path ./.svn \) -prune -o -exec svn lock --force {} \;'''
 
+
 def do_command(command, print_output=True, return_=False):
     """
         Execute a command on the shell and return output if asked for.
@@ -210,21 +211,20 @@ class SyncHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    if len(sys.argv)>=2:
+    if len(sys.argv) >= 2:
         cmd = sys.argv[1]
 
-        if cmd.lower()=='clean':
+        if cmd.lower() == 'clean':
             print('Do you want to delete all local repository copies? Y/n')
             confirm = input()
-            if not confirm or confirm[:1].lower()=='y':
+            if not confirm or confirm[:1].lower() == 'y':
                 for (repo_name, value) in DIRECTORY_MAP.items():
                     print('Deleting ', repo_name)
                     dir_ = os.path.join(os.getcwd(),
-                        DIRECTORY_MAP[repo_name][0])
+                                        DIRECTORY_MAP[repo_name][0])
                     do_command('rm -rf '+dir_)
                 print('Done, exiting.')
                 sys.exit(0)
-
 
     print('Pulling all repositories')
     print('-'*80)
