@@ -15,10 +15,11 @@ RELOCK_EVERYTIME = True
 # WARNING: REPO NAME (I.E KEY) MUST == REPO NAME ON GITHUB. ONLY THEN
 # WILL git-svn-sync KNOW WHICH REPO TO MESS WITH.
 DIRECTORY_MAP = {
-    'FakeRepoLulz': ('FakeRepoLulz',
-        'git@github.com:svineet/FakeRepoLulz.git',
-        'https://svineetorg.svn.cloudforge.com/fakerepolulz5'),
+    'apertium-html-tools': ('apertium-html-tools',
+        'https://github.com/goavki/apertium-html-tools.git',
+        'https://svn.code.sf.net/p/apertium/svn/trunk/apertium-tools/apertium-html-tools/'),
 }
+# Default settings are for apertium-html-tools
 
 
 # Commit name on github, new sha[:6], Committer name and Committer email 
